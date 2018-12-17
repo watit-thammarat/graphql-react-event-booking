@@ -3,8 +3,10 @@ const bodyParser = require('body-parser');
 const graphqlHttp = require('express-graphql');
 const { buildSchema } = require('graphql');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const Event = require('./models/event');
+const User = require('./models/user');
 
 const PORT = 3000;
 const app = express();
@@ -24,11 +26,22 @@ app.use(
         date: String!
       }
 
+      type User {
+        _id: ID!
+        email: String!
+        password: String
+      }
+
       input EventInput {
         title: String!
         description: String!
         price: Float!
         date: String!
+      }
+
+      input UserInput {
+        email: String!
+        password: String!
       }
 
       type RootQuery {
@@ -37,6 +50,7 @@ app.use(
 
       type RootMutation {
         createEvent(eventInput: EventInput): Event
+        createUser(userInput: UserInput): User
       }
 
       schema {
@@ -48,7 +62,7 @@ app.use(
       events: async () => {
         try {
           const events = await Event.find({});
-          return events.map(e => ({ ...e._doc, _id: e.id.toString() }));
+          return events.map(e => ({ ...e._doc, _id: e.id }));
         } catch (err) {
           console.error(err);
           throw err;
@@ -57,18 +71,41 @@ app.use(
 
       createEvent: async ({ eventInput }) => {
         const { title, description, price, date } = eventInput;
+        const userId = '5c17e70b5dbfb1455bab4802';
         let event = new Event({
           title,
           description,
           price: +price,
-          date: new Date(date)
+          date: new Date(date),
+          creator: userId
         });
         try {
           event = await event.save();
-          console.log(event);
-          return { ...event._doc, _id: event.id.toString() };
+          let user = await User.findById(userId);
+          if (!user) {
+            throw new Error('User exists already.');
+          }
+          user.createdEvents.push(event);
+          user = await user.save();
+          return { ...event._doc, _id: event.id };
         } catch (err) {
           console.error(err);
+          throw err;
+        }
+      },
+
+      createUser: async ({ userInput }) => {
+        let { email, password } = userInput;
+        try {
+          let user = await User.findOne({ email });
+          if (user) {
+            throw new Error('User exists already.');
+          }
+          password = await bcrypt.hash(password, 12);
+          user = new User({ email, password });
+          user = await user.save();
+          return { ...user._doc, password: null, _id: user.id };
+        } catch (err) {
           throw err;
         }
       }
