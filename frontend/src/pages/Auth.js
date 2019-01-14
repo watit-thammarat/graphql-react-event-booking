@@ -1,8 +1,11 @@
 import React, { Component } from 'react';
 
 import './Auth.css';
+import AuthContext from '../context/auth-context';
 
 class Auth extends Component {
+  static contextType = AuthContext;
+
   constructor(props) {
     super(props);
     this.emailEl = React.createRef();
@@ -55,7 +58,10 @@ class Auth extends Component {
         throw new Error('Failed');
       }
       const json = await res.json();
-      console.log(json);
+      if (json.data.login.token) {
+        const { token, userId, tokenExpiration } = json.data.login;
+        this.context.login(token, userId, tokenExpiration);
+      }
     } catch (err) {
       console.error(err);
     }
