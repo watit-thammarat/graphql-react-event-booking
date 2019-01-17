@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Fragment } from 'react';
 import { NavLink } from 'react-router-dom';
 
 import './MainNavigation.css';
@@ -7,7 +7,7 @@ import AuthContext from '../../context/auth-context';
 const mainNavigation = props => {
   return (
     <AuthContext.Consumer>
-      {({ token }) => (
+      {({ token, logout }) => (
         <header className="main-navigation">
           <div className="main-navigation__logo">
             <h1>EasyEvent</h1>
@@ -23,9 +23,14 @@ const mainNavigation = props => {
                 <NavLink to="/events">Events</NavLink>
               </li>
               {token && (
-                <li>
-                  <NavLink to="/bookings">Bookings</NavLink>
-                </li>
+                <Fragment>
+                  <li>
+                    <NavLink to="/bookings">Bookings</NavLink>
+                  </li>
+                  <li>
+                    <button onClick={logout}>Logout</button>
+                  </li>
+                </Fragment>
               )}
             </ul>
           </nav>

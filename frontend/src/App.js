@@ -39,6 +39,8 @@ class App extends Component {
             <main className="main-content">
               <Switch>
                 {!token && <Redirect exact from="/" to="/auth" />}
+                {!token && <Redirect exact from="/bookings" to="/auth" />}
+                {!token && <Redirect exact from="/events" to="/auth" />}
                 {token && <Redirect exact from="/" to="/events" />}
                 {token && <Redirect exact from="/auth" to="/events" />}
                 {!token && <Route exact path="/auth" component={Auth} />}
