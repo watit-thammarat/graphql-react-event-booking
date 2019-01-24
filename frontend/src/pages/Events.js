@@ -4,13 +4,20 @@ import './Event.css';
 import Modal from '../components/Modal/Modal';
 import Backdrop from '../components/Backdrop/Backdrop';
 import AuthContext from '../context/auth-context';
+import EventList from '../components/Events/EventList/EventList';
+import Spinner from '../components/Spinner/Spinner';
 
 class Events extends Component {
   static contextType = AuthContext;
 
   constructor(props) {
     super(props);
-    this.state = { creating: false, events: [] };
+    this.state = {
+      creating: false,
+      events: [],
+      isLoading: false,
+      selectedEvent: null
+    };
   }
 
   componentDidMount() {
@@ -36,6 +43,7 @@ class Events extends Component {
       `
     };
     try {
+      this.setState({ isLoading: true });
       const res = await fetch('http://localhost:5000/graphql', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -51,6 +59,8 @@ class Events extends Component {
       this.setState({ events: data.events });
     } catch (err) {
       console.error(err);
+    } finally {
+      this.setState({ isLoading: false });
     }
   };
 
@@ -89,16 +99,13 @@ class Events extends Component {
             price
             description
             date
-            creator {
-              _id
-              email
-            }
           }
         }
       `
     };
     const token = this.context.token;
     try {
+      this.setState({ isLoading: true });
       const res = await fetch('http://localhost:5000/graphql', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -113,18 +120,36 @@ class Events extends Component {
       }
       const json = await res.json();
       console.log('json: ', json);
-      this.fetchEvents();
+      this.setState(prev => ({
+        events: [
+          ...prev.events,
+          {
+            ...json.data.createEvent,
+            creator: { _id: this.context.userId }
+          }
+        ]
+      }));
     } catch (err) {
       console.error(err);
+    } finally {
+      this.setState({ isLoading: false });
     }
   };
 
   modalCancelHandler = () => {
-    this.setState({ creating: false });
+    this.setState({ creating: false, selectedEvent: null });
   };
 
+  showDetailHandler = id => {
+    this.setState(prev => ({
+      selectedEvent: prev.events.find(e => e._id === id)
+    }));
+  };
+
+  bookEventHandler = () => {};
+
   render() {
-    const { creating, events } = this.state;
+    const { creating, events, selectedEvent } = this.state;
     return (
       <Fragment>
         {creating && (
@@ -132,6 +157,7 @@ class Events extends Component {
             <Backdrop />
             <Modal
               title="Add Event"
+              confirmText="Confirm"
               canCancel
               canConfirm
               onCancel={this.modalCancelHandler}
@@ -162,6 +188,26 @@ class Events extends Component {
             </Modal>
           </Fragment>
         )}
+        {selectedEvent && (
+          <Fragment>
+            <Backdrop />
+            <Modal
+              title={selectedEvent.title}
+              confirmText="Book"
+              canCancel
+              canConfirm
+              onCancel={this.modalCancelHandler}
+              onConfirm={this.bookEventHandler}
+            >
+              <h1>{selectedEvent.title}</h1>
+              <h2>
+                ${selectedEvent.price} -{' '}
+                {new Date(selectedEvent.date).toLocaleDateString()}
+              </h2>
+              <p>{selectedEvent.description}</p>
+            </Modal>
+          </Fragment>
+        )}
         {this.context.token && (
           <div className="events-control">
             <p>Share your own events</p>
@@ -170,13 +216,15 @@ class Events extends Component {
             </button>
           </div>
         )}
-        <ul className="events__list">
-          {events.map(e => (
-            <li key={e._id} className="events__list-item">
-              {e.title}
-            </li>
-          ))}
-        </ul>
+        {this.state.isLoading ? (
+          <Spinner />
+        ) : (
+          <EventList
+            authUserId={this.context.userId}
+            events={events}
+            onViewDetail={this.showDetailHandler}
+          />
+        )}
       </Fragment>
     );
   }
