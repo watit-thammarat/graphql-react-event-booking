@@ -18,10 +18,15 @@ class Events extends Component {
       isLoading: false,
       selectedEvent: null
     };
+    this.isActive = true;
   }
 
   componentDidMount() {
     this.fetchEvents();
+  }
+
+  componentWillUnmount() {
+    this.isActive = false;
   }
 
   fetchEvents = async () => {
@@ -56,7 +61,9 @@ class Events extends Component {
         throw new Error('Failed');
       }
       const { data } = await res.json();
-      this.setState({ events: data.events });
+      if (this.isActive) {
+        this.setState({ events: data.events });
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -146,7 +153,43 @@ class Events extends Component {
     }));
   };
 
-  bookEventHandler = () => {};
+  bookEventHandler = async () => {
+    if (!this.context.token) {
+      this.setState({ selectedEvent: null });
+      return;
+    }
+    const body = {
+      query: `
+        mutation {
+          bookEvent(eventId: "${this.state.selectedEvent._id}") {
+            _id
+            createdAt
+            updatedAt
+          }
+        }
+      `
+    };
+    try {
+      const token = this.context.token;
+      const res = await fetch('http://localhost:5000/graphql', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const statuses = [200, 201];
+      if (!statuses.includes(res.status)) {
+        throw new Error('Failed');
+      }
+      const { data } = await res.json();
+      console.log(data);
+      this.setState({ selectedEvent: null });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   render() {
     const { creating, events, selectedEvent } = this.state;
@@ -193,7 +236,7 @@ class Events extends Component {
             <Backdrop />
             <Modal
               title={selectedEvent.title}
-              confirmText="Book"
+              confirmText={this.context.token ? 'Book' : 'Confirm'}
               canCancel
               canConfirm
               onCancel={this.modalCancelHandler}
