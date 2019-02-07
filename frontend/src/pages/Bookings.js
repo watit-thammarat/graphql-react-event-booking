@@ -60,13 +60,14 @@ class Bookings extends Component {
   deleteBookingHanlder = async id => {
     const body = {
       query: `
-        mutation {
-          cancelBooking(bookingId: "${id}") {
+        mutation CancelBooking($id: ID!) {
+          cancelBooking(bookingId: $id) {
             _id
             title
           }
         }
-      `
+      `,
+      variables: { id }
     };
     try {
       this.setState({ isLoading: true });

@@ -24,25 +24,27 @@ class Auth extends Component {
     }
     let body = {
       query: `
-        query {
-          login(email: "${email}", password: "${password}") {
+        query Login($email: String!, $password: String!) {
+          login(email: $email, password: $password) {
             userId
             token
             tokenExpiration
           }
         }
-      `
+      `,
+      variables: { email, password }
     };
     if (!this.state.isLogin) {
       body = {
         query: `
-        mutation {
-          createUser(userInput: { email: "${email}", password: "${password}" }) {
-            _id
-            email
+          mutation CreateUser($email: String!, $password: String!) {
+            createUser(userInput: { email: $email, password: $password }) {
+              _id
+              email
+            }
           }
-        }
-      `
+        `,
+        variables: { email, password }
       };
     }
     try {
@@ -58,7 +60,7 @@ class Auth extends Component {
         throw new Error('Failed');
       }
       const json = await res.json();
-      if (json.data.login.token) {
+      if (this.state.isLogin && json.data.login.token) {
         const { token, userId, tokenExpiration } = json.data.login;
         this.context.login(token, userId, tokenExpiration);
       }
