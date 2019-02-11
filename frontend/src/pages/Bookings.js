@@ -3,13 +3,16 @@ import React, { Component, Fragment } from 'react';
 import AuthContext from '../context/auth-context';
 import Spinner from '../components/Spinner/Spinner';
 import BookingList from '../components/Bookings/BookingList/BookingList';
+import BookingsChart from '../components/Bookings/BookingsChart/BookingsChart';
+import BookingsControls from '../components/Bookings/BookingControls/BookingControls';
 
 class Bookings extends Component {
   static contextType = AuthContext;
 
   state = {
     isLoading: false,
-    bookings: []
+    bookings: [],
+    outputType: 'list'
   };
 
   componentDidMount() {
@@ -28,6 +31,7 @@ class Bookings extends Component {
               _id
               title
               date
+              price
             }
           }
         }
@@ -95,20 +99,38 @@ class Bookings extends Component {
     }
   };
 
+  changeOutputTypeHandler = outputType => {
+    if (outputType === 'list') {
+      this.setState({ outputType: 'list' });
+    } else {
+      this.setState({ outputType: 'chart' });
+    }
+  };
+
   render() {
-    const { isLoading, bookings } = this.state;
-    return (
-      <Fragment>
-        {isLoading ? (
-          <Spinner />
-        ) : (
-          <BookingList
-            bookings={bookings}
-            onDelete={this.deleteBookingHanlder}
+    const { isLoading, bookings, outputType } = this.state;
+    let content = <Spinner />;
+    if (!isLoading) {
+      content = (
+        <Fragment>
+          <BookingsControls
+            onChange={this.changeOutputTypeHandler}
+            activeOutputType={outputType}
           />
-        )}
-      </Fragment>
-    );
+          <div>
+            {outputType === 'list' ? (
+              <BookingList
+                bookings={bookings}
+                onDelete={this.deleteBookingHanlder}
+              />
+            ) : (
+              <BookingsChart bookings={bookings} />
+            )}
+          </div>
+        </Fragment>
+      );
+    }
+    return <Fragment>{content}</Fragment>;
   }
 }
 
